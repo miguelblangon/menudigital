@@ -3,51 +3,44 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Writer\PngWriter;
-use Endroid\QrCode\Writer\SvgWriter;
-use Illuminate\Support\Facades\Route;
+use App\Services\QrCodeService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Response;
 
 class QrController extends Controller
 {
-    public function index()
+    public function __construct(private readonly QrCodeService $qrCodes) {}
+
+    public function index(): View
     {
-        $menuUrl = url('/');
-        
-        return view('admin.qr.index', [
-            'menuUrl' => $menuUrl,
+        $menuUrl = url("/");
+
+        return view("admin.qr.index", [
+            "menuUrl" => $menuUrl,
+            // SVG en línea: render inmediato sin segunda petición y nítido al imprimir.
+            "qrSvg" => $this->qrCodes->svg($menuUrl, 320),
         ]);
     }
 
-    public function generate()
+    public function generate(): Response
     {
-        $menuUrl = url('/');
-        
-        // Create QR code with SVG writer
-        $qrCode = QrCode::create($menuUrl)
-            ->setSize(300);
-        
-        $writer = new SvgWriter();
-        $result = $writer->write($qrCode);
-        
-        return response($result->getString())
-            ->header('Content-Type', 'image/svg+xml')
-            ->header('Content-Disposition', 'inline; filename="menu-qr.svg"');
+        $svg = $this->qrCodes->svg(url("/"), 320);
+
+        return response($svg, 200, [
+            "Content-Type" => "image/svg+xml",
+            "Content-Disposition" => 'inline; filename="menu-qr.svg"',
+            "Cache-Control" => "private, max-age=3600",
+        ]);
     }
 
-    public function download()
+    public function download(): Response
     {
-        $menuUrl = url('/');
-        
-        // Create QR code with PNG writer for download
-        $qrCode = QrCode::create($menuUrl)
-            ->setSize(400);
-        
-        $writer = new PngWriter();
-        $result = $writer->write($qrCode);
-        
-        return response($result->getString())
-            ->header('Content-Type', 'image/png')
-            ->header('Content-Disposition', 'attachment; filename="menu-qr.png"');
+        $png = $this->qrCodes->png(url("/"), 600);
+
+        return response($png, 200, [
+            "Content-Type" => "image/png",
+            "Content-Disposition" => 'attachment; filename="menu-qr.png"',
+            "Cache-Control" => "private, max-age=3600",
+        ]);
     }
 }
