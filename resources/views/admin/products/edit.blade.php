@@ -43,6 +43,16 @@
     </div>
 
     <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Disponibilidad</label>
+        <input type="hidden" name="available" value="0">
+        <label class="flex items-center gap-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors w-fit">
+            <input type="checkbox" name="available" value="1" {{ old('available', $product->available) ? 'checked' : '' }} class="rounded h-4 w-4">
+            <span class="text-sm">Disponible en la carta</span>
+        </label>
+        <p class="text-xs text-gray-500 mt-1">Si se desmarca, el producto no aparece en la carta pública.</p>
+    </div>
+
+    <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Alérgenos</label>
         @if(count($allergens) > 0)
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">

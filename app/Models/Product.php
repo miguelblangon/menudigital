@@ -2,26 +2,38 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Product extends Model
 {
-    protected $fillable = ["category_id", "name", "description", "price", "image", "available"];
-
-    protected $casts = [
-        "available" => "boolean",
+    /**
+     * La columna se llama `available` (antes `is_available`). Hay un único nombre
+     * válido, sin accessor/mutator que aliasse: así un typo al escribir falla en
+     * los tests en lugar de quedarse silenciosamente en el valor por defecto.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        "category_id",
+        "name",
+        "description",
+        "price",
+        "image",
+        "available",
     ];
 
-    public function setAvailableAttribute($value)
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
     {
-        $this->attributes['is_available'] = (bool) $value;
-    }
-
-    public function getAvailableAttribute()
-    {
-        return (bool) ($this->attributes['is_available'] ?? true);
+        return [
+            "price" => "float",
+            "available" => "boolean",
+        ];
     }
 
     public function category(): BelongsTo
@@ -32,5 +44,16 @@ class Product extends Model
     public function allergens(): BelongsToMany
     {
         return $this->belongsToMany(Allergen::class);
+    }
+
+    /**
+     * Productos que se muestran en la carta pública.
+     *
+     * @param  Builder<Product>  $query
+     * @return Builder<Product>
+     */
+    public function scopeAvailable(Builder $query): Builder
+    {
+        return $query->where("available", true);
     }
 }

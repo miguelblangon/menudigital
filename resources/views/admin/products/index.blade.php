@@ -24,6 +24,9 @@
                 <h3 class="font-semibold text-gray-900 truncate">{{ $product->name }}</h3>
                 <p class="text-sm text-gray-500">{{ $product->category->name }}</p>
                 <p class="text-lg font-bold text-gray-900">€{{ number_format($product->price, 2) }}</p>
+                <span class="mt-1 inline-block text-xs px-2 py-1 rounded-full {{ $product->available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600' }}">
+                    {{ $product->available ? 'Disponible' : 'No disponible' }}
+                </span>
             </div>
         </div>
         @if(count($product->allergens) > 0)
@@ -37,10 +40,10 @@
             <a href="{{ route('admin.products.edit', $product) }}" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-medium text-center hover:bg-blue-100 transition-colors">
                 Editar
             </a>
-            <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="flex-1">
+            <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="flex-1" data-confirm="¿Eliminar este producto?">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="w-full bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors" onclick="return confirm('¿Eliminar este producto?')">
+                <button type="submit" class="w-full bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors">
                     Eliminar
                 </button>
             </form>
@@ -62,6 +65,7 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Disponibilidad</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alérgenos</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
             </tr>
@@ -80,6 +84,11 @@
                 <td class="px-6 py-4 text-gray-500">{{ $product->category->name }}</td>
                 <td class="px-6 py-4 text-gray-900">€{{ number_format($product->price, 2) }}</td>
                 <td class="px-6 py-4">
+                    <span class="inline-block text-xs px-2 py-1 rounded-full {{ $product->available ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-600' }}">
+                        {{ $product->available ? 'Disponible' : 'No disponible' }}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
                     @if(count($product->allergens) > 0)
                         @foreach($product->allergens as $allergen)
                             <span class="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs mr-1">{{ $allergen->name }}</span>
@@ -90,16 +99,16 @@
                 </td>
                 <td class="px-6 py-4">
                     <a href="{{ route('admin.products.edit', $product) }}" class="text-blue-600 hover:text-blue-800 mr-3">Editar</a>
-                    <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="inline">
+                    <form action="{{ route('admin.products.destroy', $product) }}" method="POST" class="inline" data-confirm="¿Estás seguro de eliminar este producto?">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('¿Estás seguro de eliminar este producto?')">Eliminar</button>
+                        <button type="submit" class="text-red-600 hover:text-red-800">Eliminar</button>
                     </form>
                 </td>
             </tr>
             @empty
             <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">No hay productos creados aún.</td>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">No hay productos creados aún.</td>
             </tr>
             @endforelse
         </tbody>

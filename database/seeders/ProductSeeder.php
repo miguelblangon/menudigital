@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Product;
-use App\Models\Category;
 use App\Models\Allergen;
+use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
@@ -46,10 +46,10 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
-        };
+        }
 
         // TOSTADAS (15 productos)
         $tostadasProducts = [
@@ -77,7 +77,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -113,7 +113,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -144,7 +144,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -175,7 +175,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -201,7 +201,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -222,7 +222,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }
@@ -243,7 +243,7 @@ class ProductSeeder extends Seeder
                 "description" => $product["description"],
                 "price" => $product["price"],
             ]);
-            if (!empty($product["allergens"])) {
+            if (! empty($product["allergens"])) {
                 $this->attachAllergens($p, $product["allergens"]);
             }
         }

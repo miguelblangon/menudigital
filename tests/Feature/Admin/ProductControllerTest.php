@@ -30,8 +30,7 @@ class ProductControllerTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Croquetas',
             'price' => 8.50,
-            'is_available' => true,
-            'allergens' => [],
+            'available' => true,
         ]);
 
         $response = $this->get('/admin/products');
@@ -49,7 +48,6 @@ class ProductControllerTest extends TestCase
             'category_id' => $category->id,
             'name' => 'Tarta',
             'price' => 5.00,
-            'allergens' => [],
         ]);
 
         $response = $this->get('/admin/products');
@@ -83,7 +81,7 @@ class ProductControllerTest extends TestCase
             'name' => 'Ensalada',
             'description' => 'Ensalada fresca',
             'price' => 12.50,
-            'is_available' => true,
+            'available' => '1',
         ]);
 
         $response->assertRedirect('/admin/products');
@@ -91,8 +89,41 @@ class ProductControllerTest extends TestCase
         $this->assertDatabaseHas('products', [
             'name' => 'Ensalada',
             'price' => 12.50,
-            'is_available' => true,
+            'available' => true,
         ]);
+    }
+
+    public function test_store_can_mark_product_unavailable()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+
+        $response = $this->post('/admin/products', [
+            'category_id' => $category->id,
+            'name' => 'Especial de la casa',
+            'price' => 18.00,
+            'available' => '0',
+        ]);
+
+        $response->assertRedirect('/admin/products');
+        $this->assertDatabaseHas('products', [
+            'name' => 'Especial de la casa',
+            'available' => false,
+        ]);
+    }
+
+    public function test_store_rejects_allergen_id_that_does_not_exist()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+
+        $response = $this->post('/admin/products', [
+            'category_id' => $category->id,
+            'name' => 'Pan',
+            'price' => 1.00,
+            'allergens' => [999],
+        ]);
+
+        $response->assertSessionHasErrors('allergens.0');
+        $this->assertSame(0, Product::count());
     }
 
     public function test_store_with_image()
@@ -108,7 +139,7 @@ class ProductControllerTest extends TestCase
         ]);
 
         $response->assertRedirect('/admin/products');
-        Storage::disk('public')->assertExists('products/' . $file->hashName());
+        Storage::disk('public')->assertExists('products/'.$file->hashName());
     }
 
     public function test_store_validates_required_fields()
@@ -209,7 +240,7 @@ class ProductControllerTest extends TestCase
 
         $response->assertRedirect('/admin/products');
         Storage::disk('public')->assertMissing('products/old-image.jpg');
-        Storage::disk('public')->assertExists('products/' . $newFile->hashName());
+        Storage::disk('public')->assertExists('products/'.$newFile->hashName());
     }
 
     public function test_update_without_image_keeps_existing()
