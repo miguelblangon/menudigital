@@ -22,10 +22,10 @@
             <a href="{{ route('admin.allergens.edit', $alergen) }}" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-sm font-medium text-center hover:bg-blue-100 transition-colors">
                 Editar
             </a>
-            <form action="{{ route('admin.allergens.destroy', $alergen) }}" method="POST" class="flex-1">
+            <form action="{{ route('admin.allergens.destroy', $alergen) }}" method="POST" class="flex-1" data-confirm="¿Eliminar este alérgeno?">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="w-full bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors" onclick="return confirm('¿Eliminar este alérgeno?')">
+                <button type="submit" class="w-full bg-red-50 text-red-600 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors">
                     Eliminar
                 </button>
             </form>
@@ -57,10 +57,10 @@
                 </td>
                 <td class="px-6 py-4">
                     <a href="{{ route('admin.allergens.edit', $alergen) }}" class="text-blue-600 hover:text-blue-800 mr-3">Editar</a>
-                    <form action="{{ route('admin.allergens.destroy', $alergen) }}" method="POST" class="inline">
+                    <form action="{{ route('admin.allergens.destroy', $alergen) }}" method="POST" class="inline" data-confirm="¿Estás seguro de eliminar este alérgeno?">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="text-red-600 hover:text-red-800" onclick="return confirm('¿Estás seguro de eliminar este alérgeno?')">Eliminar</button>
+                        <button type="submit" class="text-red-600 hover:text-red-800">Eliminar</button>
                     </form>
                 </td>
             </tr>

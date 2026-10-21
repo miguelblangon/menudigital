@@ -208,4 +208,3 @@ class AllergenControllerTest extends TestCase
         ]);
     }
 }
-
