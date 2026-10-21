@@ -3,6 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -89,5 +90,31 @@ class CategoryControllerTest extends TestCase
         $response->assertRedirect(route('admin.categories.index'));
         $response->assertSessionHas('success');
         $this->assertDatabaseMissing('categories', ['id' => $category->id]);
+    }
+
+    public function test_category_with_products_cannot_be_deleted()
+    {
+        $category = Category::create(['name' => 'Tapas', 'slug' => 'tapas']);
+        $product = Product::create([
+            'category_id' => $category->id,
+            'name' => 'Bravas',
+            'price' => 7.50,
+        ]);
+
+        $response = $this->delete(route('admin.categories.destroy', $category));
+
+        $response->assertRedirect(route('admin.categories.index'));
+        $response->assertSessionHasErrors("category");
+        $this->assertDatabaseHas('categories', ['id' => $category->id]);
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+    }
+
+    public function test_slug_stays_unique_when_two_names_collide()
+    {
+        $this->post(route('admin.categories.store'), ['name' => 'Café']);
+        $this->post(route('admin.categories.store'), ['name' => 'Cafe']);
+
+        $this->assertDatabaseHas('categories', ['name' => 'Café', 'slug' => 'cafe']);
+        $this->assertDatabaseHas('categories', ['name' => 'Cafe', 'slug' => 'cafe-2']);
     }
 }
