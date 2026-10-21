@@ -14,7 +14,7 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         // Solo crear si no existe ya un usuario admin
-        if (!User::where('email', 'admin@menudigital.com')->exists()) {
+        if (! User::where('email', 'admin@menudigital.com')->exists()) {
             User::create([
                 'name' => 'Administrador',
                 'email' => 'admin@menudigital.com',

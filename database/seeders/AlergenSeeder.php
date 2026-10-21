@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Allergen;
+use Illuminate\Database\Seeder;
 
 class AlergenSeeder extends Seeder
 {
