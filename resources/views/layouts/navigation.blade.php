@@ -54,9 +54,7 @@
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
 
-                            <x-dropdown-link :href="route('logout')"
-                                    onclick="event.preventDefault();
-                                                this.closest('form').submit();">
+                            <x-dropdown-link :href="route('logout')" data-logout>
                                 {{ __('Log Out') }}
                             </x-dropdown-link>
                         </form>
@@ -112,9 +110,7 @@
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
 
-                    <x-responsive-nav-link :href="route('logout')"
-                            onclick="event.preventDefault();
-                                        this.closest('form').submit();">
+                    <x-responsive-nav-link :href="route('logout')" data-logout>
                         {{ __('Log Out') }}
                     </x-responsive-nav-link>
                 </form>
