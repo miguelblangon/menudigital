@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-label="Sin imagen">
+    <rect width="600" height="400" fill="#e7e5e4"/>
+    <g fill="none" stroke="#a8a29e" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M232 168h104v72a52 52 0 0 1-52 52h0a52 52 0 0 1-52-52z"/>
+        <path d="M336 188h24a28 28 0 0 1 0 56h-24"/>
+        <path d="M256 132c0-12 12-12 12-24M288 132c0-12 12-12 12-24M320 132c0-12 12-12 12-24"/>
+    </g>
+    <text x="300" y="330" text-anchor="middle" font-family="system-ui, sans-serif" font-size="28" fill="#a8a29e">Sin imagen</text>
+</svg>

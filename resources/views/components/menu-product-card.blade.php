@@ -1,8 +1,10 @@
 <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-stone-100 hover:shadow-md transition-shadow">
     <!-- Product Image -->
     <div class="relative h-48 overflow-hidden">
-        <img 
-            :src="product.image ? (product.image.startsWith('http') ? product.image : '/storage/' + product.image) : 'https://placehold.co/600x400/e7e5e4/a8a29e?text=Sin+imagen'" 
+        {{-- La imagen siempre es local (/storage): img-src 'self' la permite. Las URLs
+             remotas ya no se admiten, ni como dependencia externa ni abriendo la CSP. --}}
+        <img
+            :src="product.image ? '/storage/' + product.image : '/images/no-image.svg'"
             :alt="product.name"
             class="w-full h-full object-cover"
             loading="lazy"
@@ -12,7 +14,7 @@
     <!-- Product Info -->
     <div class="p-4">
         <div class="flex items-start justify-between gap-2">
-            <h3 class="text-lg font-semibold text-stone-800" style="font-family: 'Playfair Display', serif;" x-text="product.name"></h3>
+            <h3 class="text-lg font-semibold text-stone-800 font-display" x-text="product.name"></h3>
             <span class="text-lg font-bold text-amber-700 whitespace-nowrap" x-text="'€' + product.price.toFixed(2)"></span>
         </div>
         

@@ -12,9 +12,15 @@ export default {
     theme: {
         extend: {
             fontFamily: {
+                // Figtree: panel de administración (Breeze).
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                // Inter: carta pública.
+                body: ['Inter', ...defaultTheme.fontFamily.sans],
+                // Playfair Display: titulares de la carta.
+                display: ['"Playfair Display"', ...defaultTheme.fontFamily.serif],
             },
         },
+
     },
 
     plugins: [forms],

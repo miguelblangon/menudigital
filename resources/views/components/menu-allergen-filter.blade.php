@@ -1,7 +1,7 @@
 <div x-show="showAllergenFilter" class="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm" x-transition.opacity>
     <div class="bg-white w-full max-w-lg rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto" x-transition:enter="transition ease-out duration-300 transform translate-y-full" x-transition:enter-end="transform translate-y-0">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-stone-800" style="font-family: 'Playfair Display', serif;">Filtrar por alérgenos</h2>
+            <h2 class="text-xl font-bold text-stone-800 font-display">Filtrar por alérgenos</h2>
             <button @click="showAllergenFilter = false" class="p-2 hover:bg-stone-100 rounded-full transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-stone-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

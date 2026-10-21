@@ -1,6 +1,6 @@
 <header class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-stone-200">
     <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-        <h1 class="text-xl font-bold text-stone-800" style="font-family: 'Playfair Display', serif;">Café Aroma</h1>
+        <h1 class="text-xl font-bold text-stone-800 font-display">Café Aroma</h1>
         <div class="flex items-center gap-2">
             @auth
                 <a href="{{ route('admin.products.index') }}" class="flex items-center gap-1 px-3 py-2 bg-stone-800 text-white rounded-full text-sm font-medium hover:bg-stone-700 transition-colors">
