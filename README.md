@@ -1,58 +1,69 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# MenúDigital
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Carta digital para un restaurante: el comercio gestiona productos, categorías y
+alérgenos desde un panel privado, y los clientes escanean un código QR de la mesa
+para ver la carta en su móvil.
 
-## About Laravel
+**No hay registro público.** Una única cuenta de administrador gestiona todo; el
+visitante sólo lee la carta. Todo el entorno (carta y panel) está pensado para
+usarse desde el teléfono: la especificación lo pide y el panel se maneja entero
+con una mano.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+| Capa | Qué se usa |
+|---|---|
+| Backend | Laravel 13.35 · PHP 8.5.11 · SQLite (`database/database.sqlite`) |
+| Front | Blade + Tailwind CSS 3.4 · Alpine.js · Vite |
+| Autenticación | Laravel Breeze (sesión) · bloqueo por intentos fallidos |
+| QR | `endroid/qr-code` v6 (SVG en línea + PNG rasterizado con GD) |
+| Calidad | PHPUnit (feature tests) · Pint · PHPStan/larastan nivel 5 |
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Tipografías, Alpine y favicon se sirven **desde el propio origen**: no hay CDNs,
+y eso permite una `Content-Security-Policy` cerrada (`script-src 'self'`).
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Puesta en marcha
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer setup            # install + .env + key:generate + migrate + npm install + build
+php artisan migrate:fresh --seed
+composer dev              # server + queue + vite en un solo proceso
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+En producción: `npm run build` y `php artisan migrate --force`.
 
-## Contributing
+Credenciales sembradas en entorno de desarrollo (`database/seeders/AdminUserSeeder.php`):
+`admin@menudigital.com` / `admin123`. **Cambiarlas antes de publicar.**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Rutas
 
-## Code of Conduct
+| Ruta | Acceso | Qué es |
+|---|---|---|
+| `/` | público | La carta, con filtros de categoría y de alérgenos |
+| `/dashboard` | auth | Resumen del negocio |
+| `/admin/products` | auth | CRUD de productos (imagen, precio, disponibilidad, alérgenos) |
+| `/admin/categories` | auth | CRUD de categorías (slug automático, orden manual) |
+| `/admin/allergens` | auth | CRUD de alérgenos |
+| `/admin/qr` | auth | Código QR de la carta: ver, descargar PNG, imprimir |
+| `/login`, `/logout` | guest/auth | Acceso del administrador (no existe `/register`) |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Verificación
 
-## Security Vulnerabilities
+```bash
+composer test                                                # 103 passing · 434 aserciones
+vendor/bin/pint --test                                       # 0 incidencias de estilo
+vendor/bin/phpstan analyse --no-progress --memory-limit=1G   # 0 errores (nivel 5)
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Documentación
 
-## License
+Toda está en [`docs/`](docs/README.md):
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- [`ARQUITECTURA.md`](docs/ARQUITECTURA.md) — modelo de datos, rutas, controladores y la carta con/sin JavaScript.
+- [`MOVIL.md`](docs/MOVIL.md) — el criterio *mobile-first* y qué regla CSS o de marcado lo sostiene.
+- [`PRUEBAS.md`](docs/PRUEBAS.md) — qué fija cada test y las puertas de calidad.
+- [`DESARROLLO.md`](docs/DESARROLLO.md) — instalación, base de datos, *seeders* y despliegue.
+- [`ESTADO.md`](docs/ESTADO.md) — trazabilidad requisito → implementación, con lo pendiente.
+- [`PROGRESO-AUDITORIA.md`](docs/PROGRESO-AUDITORIA.md) — bitácora de la auditoría de seguridad.
+
+Los requisitos originales viven en [`especificaciones.md`](especificaciones.md).

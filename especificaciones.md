@@ -39,10 +39,11 @@
 - Landinng page responsive. Status = OK
 [Gestion]
 - CRUD de Productos, Categorias, Alergenos. Status = OK
-- CRUD de Qr. Status = Pendiente.
+- Generacion de codigo QR de la landing. Status = OK ( `/admin/qr`: SVG en pantalla, `/admin/qr/generate` y `/admin/qr/download` en PNG. No hay QR guardado en BD que editar o borrar, por eso no es un CRUD completo: son 3 acciones y cubren el requisito).
 - Enlazar Productos, Categorias y Alergenos. Status = OK 
 [Seguridad]
 - Solo Administrador pede acceder . Status = OK
 - No hay forma de que un usuario se registre publicamente. Status = OK.
-- Analisis de Amenazas y posibles fallos de seguridad. Status = Pendiente.
-- Implementacion de medidas de seguiridad tales como un bloqueador por intentos fallidos u otros metodos para segurizar el entorno y que no sea vulnerable. Status = Pendiente.
+- Analisis de Amenazas y posibles fallos de seguridad. Status = OK ( auditoria bloque a bloque en `docs/PROGRESO-AUDITORIA.md`: XSS, CSRF, clickjacking, IDOR, subida de archivos, fuerza bruta, filtracion de datos a terceros por CDNs).
+- Implementacion de medidas de seguiridad tales como un bloqueador por intentos fallidos u otros metodos para segurizar el entorno y que no sea vulnerable. Status = OK ( bloqueo de login a 5 intentos por clave `email|ip` en `LoginRequest`; cabeceras `Content-Security-Policy` sin `unsafe-inline`, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, HSTS en HTTPS y `Cache-Control: no-store` en el panel; `bcrypt` a 12 rondas con rehash en login).
+- Autenticacion con doble factor (2FA). Status = Pendiente ( unico requisito funcional sin implementar: no hay TOTP ni columnas de factores. La verificacion de email que trae Breeze NO es 2FA. Ver `docs/ESTADO.md`).

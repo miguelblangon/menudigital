@@ -36,9 +36,9 @@ En `endroid/qr-code` v6 eso ya no existe: `QrCode` es `final readonly`, **sin `c
 **Qué se hizo**
 
 - Nuevo servicio `app/Services/QrCodeService.php` (único punto de acceso al generador):
-  - Construye el `QrCode` con argumentos nombrales (`data:, encoding:, errorCorrection:, size:, margin:`), como exige v6.
-  - Devuelve el SVG vía `SvgWriter`, y **el PNG se rasteriza a mano con GD** recorriendo la matriz de módulos.
-  - Limita el tamaño de salida (`MAX_PNG_PIXELS = 1600`) y normaliza el destino del QR a `config('app.url')`, para que el QR apunte siempre al host público configurado y no a un valor introducido por el usuario.
+  - Construye el `QrCode` con argumentos nombrales (`data:`, `errorCorrectionLevel:`, `size:`, `margin:`, `roundBlockSizeMode:`), como exige v6.
+  - Devuelve el SVG vía `SvgWriter`, y **el PNG se rasteriza a mano con GD** recorriendo la matriz de módulos (`imagecreatetruecolor` + `imagefilledrectangle` por módulo).
+  - El destino del QR lo fija el controlador con `url("/")`, que en producción resuelve contra `APP_URL`: no es un valor que el usuario pueda escribir, así que no hay un parámetro que sanitizar.
 - Reescrito `app/Http/Controllers/Admin/QrController.php` sobre el servicio: `index()` (SVG embebido), `generate()` (`image/svg+xml`) y `download()` (PNG adjunto). Se borró el controlador antiguo duplicado/roto.
 
 **Por qué el PNG a mano:** este host **no tiene `ext-imagick`** y el `PngWriter` de v6 depende de Imagick (no de GD). Se podría instalar `ext-imagick`, pero se prefirió no añadir binarios del sistema sin pedirlo: la rasterización con GD queda encapsulada en el servicio y es trivial sustituirla por `PngWriter` cuando Imagick esté disponible.
