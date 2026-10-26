@@ -2,14 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{--
+        width=device-width + initial-scale=1: sin esa línea el navegador del
+        móvil finge un lienzo de 980px y la carta aparece miniatura.
+        viewport-fit=cover: permite leer los *safe areas* (muesca del iPhone,
+        barra de gestos) y darles padding en vez de perder contenido tras ellos.
+    --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#fafaf9">
     <title>Cafetería - Carta Digital</title>
     {{-- Alpine y las tipografías viajan en el bundle de Vite: mismo origen, sin CDNs --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-stone-50 min-h-screen font-body" x-data="menuApp()">
+    {{-- La barra de categorías viaja dentro del <header>: un único bloque sticky. --}}
     @include('components.menu-header')
-    @include('components.menu-categories')
 
     @php
         // Enlaces sin JS: mantienen los demás filtros de la query.
@@ -48,7 +55,7 @@
     </noscript>
 
     <!-- Products Grid -->
-    <main class="max-w-lg mx-auto px-4 py-6">
+    <main class="max-w-lg mx-auto px-4 pt-6 pb-safe">
         <div class="grid gap-4">
             <template x-for="product in filteredProducts" :key="product.id">
                 @include('components.menu-product-card')

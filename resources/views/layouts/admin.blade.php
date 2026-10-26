@@ -2,15 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- El panel se gestiona desde el móvil (lo pidió el comercio): mismas
+         reglas de viewport que la carta, incluidos los safe areas. --}}
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
     <title>@yield('title', 'Admin') - Café Aroma</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Mobile Header -->
-    <header class="bg-white shadow-sm border-b border-gray-200 lg:hidden sticky top-0 z-30">
+    <header id="mobile-header" class="bg-white shadow-sm border-b border-gray-200 lg:hidden sticky top-0 z-30 pt-[env(safe-area-inset-top)]">
         <div class="flex items-center justify-between px-4 py-3">
-            <button id="menu-toggle" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            <button id="menu-toggle" type="button" aria-label="Abrir el menú de navegación" aria-controls="sidebar" aria-expanded="false" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
@@ -24,13 +27,13 @@
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden"></div>
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 min-h-screen fixed left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+    <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 h-screen overflow-y-auto fixed left-0 top-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
         <div class="p-6 border-b border-gray-200">
             <h1 class="text-xl font-bold text-gray-800">Café Aroma</h1>
             <p class="text-sm text-gray-500">Panel de Administración</p>
         </div>
         <nav class="p-4 space-y-2">
-            <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors {{ request()->routeIs('dashboard') ? 'bg-blue-50 text-blue-700' : '' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <rect width="7" height="7" x="3" y="3" rx="1"/>
                     <rect width="7" height="7" x="14" y="3" rx="1"/>
@@ -63,11 +66,47 @@
                 </svg>
                 Alérgenos
             </a>
+            <a href="{{ route('admin.qr.index') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors {{ request()->routeIs('admin.qr.*') ? 'bg-blue-50 text-blue-700' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+                Código QR
+            </a>
         </nav>
+
+        {{--
+            Zona de cuenta. Antes el único logout vivía en la navegación de
+            Breeze (layouts/navigation.blade.php), que estas pantallas ya no
+            usan: gestionando desde el móvil no había forma de cerrar sesión ni
+            de tocar el perfil. Aquí están los dos, siempre accesibles.
+        --}}
+        <div class="mt-2 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 border-t border-gray-100 space-y-2">
+            <p class="px-4 text-sm font-medium text-gray-900 truncate">{{ auth()->user()?->name ?? 'Administrador' }}</p>
+            <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors {{ request()->routeIs('profile.*') ? 'bg-blue-50 text-blue-700' : '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Perfil
+            </a>
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Salir
+                </button>
+            </form>
+        </div>
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pt-16 lg:pt-8">
+    {{--
+        El header móvil es `sticky`, no `fixed`: ya ocupa su hueco en el flujo,
+        así que un `pt-16` adicional sólo dejaba 64px de aire muerto en lo alto
+        de cada pantalla del panel desde un teléfono.
+    --}}
+    <main class="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8 pb-safe">
         <!-- Flash Messages -->
         @if (session('success'))
             <div class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
