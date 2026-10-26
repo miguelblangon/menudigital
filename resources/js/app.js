@@ -87,23 +87,55 @@ document.addEventListener(
 );
 
 // ------------------------------------------------------------ panel: sidebar
+// El panel se gestiona desde el móvil, así que el drawer es la navegación
+// principal. Además de abrir/cerrar:
+//  - se bloquea el scroll del fondo mientras está abierto (si no, arrastrar
+//    sobre el drawer mueve la página y parece que la app "se rompe");
+//  - Escape lo cierra, que es lo que espera quien usa un teclado bluetooth;
+//  - se mantiene aria-expanded/aria-hidden coherente con lo que hay en pantalla.
 const menuToggle = document.getElementById('menu-toggle');
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('sidebar-overlay');
 
 if (menuToggle !== null && sidebar !== null && overlay !== null) {
+    const isDrawerOpen = () => ! sidebar.classList.contains('-translate-x-full');
+
+    const setDrawer = (open) => {
+        sidebar.classList.toggle('-translate-x-full', ! open);
+        overlay.classList.toggle('hidden', ! open);
+        document.body.classList.toggle('overflow-hidden', open);
+        menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        menuToggle.setAttribute('aria-label', open ? 'Cerrar el menú de navegación' : 'Abrir el menú de navegación');
+
+        if (! open) {
+            document.removeEventListener('keydown', onKeydown);
+        }
+    };
+
+    const onKeydown = (event) => {
+        if (event.key === 'Escape') {
+            setDrawer(false);
+            menuToggle.focus();
+        }
+    };
+
     menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('-translate-x-full');
-        overlay.classList.toggle('hidden');
+        const open = ! isDrawerOpen();
+
+        setDrawer(open);
+
+        if (open) {
+            document.addEventListener('keydown', onKeydown);
+        }
     });
 
-    overlay.addEventListener('click', () => {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-    });
+    overlay.addEventListener('click', () => setDrawer(false));
 }
 
 // ------------------------------------------------------------ panel: QR
+// window.print() a secas imprimiría el sidebar, el header y los botones junto
+// con el código. data-print-block marca el único bloque que debe salir en papel
+// (las reglas @media print de app.css hacen el resto).
 const printButton = document.querySelector('[data-print]');
 
 if (printButton !== null) {

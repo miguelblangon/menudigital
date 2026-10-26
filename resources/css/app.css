@@ -22,3 +22,76 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+    /**
+     * `pb-safe`: margen inferior que crece con la barra de gestos de los
+     * móviles (safe-area-inset-bottom). Sin viewport-fit=cover el valor sería 0
+     * y el último producto quedaría pegado al borde físico de la pantalla.
+     */
+    .pb-safe {
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/**
+ * `[x-cloak]`: el bundle de Vite es un módulo diferido, así que Alpine se
+ * inicializa después de pintar el HTML. Sin esta regla, el modal de alérgenos
+ * (fixed, a pantalla completa) se ve un instante por encima de la carta en
+ * cuanto el móvil carga lento.
+ */
+[x-cloak] {
+    display: none !important;
+}
+
+/**
+ * `data-qr` (panel → Código QR): endroid/qr-code escribe el SVG con un ancho
+ * absoluto en píxeles (464px para la URL por defecto). Sin este ajuste el
+ * código desborda cualquier pantalla de 375px y la página del QR obliga a
+ * desplazarse en horizontal.
+ */
+[data-qr] svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/**
+ * Impresión del QR (panel → Código QR → "Imprimir").
+ *
+ * `data-print` dispara window.print() sobre la página entera del panel: sin
+ * estas reglas saldrían en papel el sidebar, la cabecera móvil y los propios
+ * botones, y el código quedaría minúsculo en una esquina. Se oculta el resto y
+ * el SVG se fija a un tamaño físico (90mm) para que sea legible al escanearlo.
+ */
+@media print {
+    body * {
+        visibility: hidden;
+    }
+
+    [data-print-block],
+    [data-print-block] * {
+        visibility: visible;
+    }
+
+    [data-print-block] {
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        width: 100%;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+    }
+
+    [data-qr] {
+        box-shadow: none;
+        border-color: #d4d4d4;
+        max-width: none;
+    }
+
+    [data-qr] svg {
+        width: 90mm;
+        height: 90mm;
+    }
+}
+
