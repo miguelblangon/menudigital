@@ -1,32 +1,93 @@
-*.log
-.DS_Store
-.env
-.env.backup
-.env.production
-.phpactor.json
-.phpunit.result.cache
-/.codex
-/.cursor/
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
-/node_modules
-/public/build
-/public/fonts-manifest.dev.json
+# MenúDigital · lo que NO debe subir al repositorio.
+# Regla de oro: se versiona código y configuración sin secretos; todo lo generado
+# (assets, cachés, logs, Base de Datos, subidas) se queda fuera.
+
+# --------------------------------------------------------------- dependencias
+/node_modules/
+/vendor/
+composer.phar
+
+# ---------------------------------------------------------------- artefactos
+# public/build lo genera `npm run build` (Vite): se compila en el host, no se
+# sube. public/hot sólo existe con `npm run dev` (el bundle lo sirve Vite en otro
+# origen) y public/storage es el enlace de `php artisan storage:link`.
+/public/build/
 /public/hot
 /public/storage
+/public/fonts-manifest.dev.json
+/.vite/
+
+# ---------------------------------------------------------------- entorno
+# Catch-all: cualquier variante del fichero de entorno se llame como se llame
+# (.env, .envProduccion, .env.production, produccion.env…). Aísla los secretos
+# aunque alguien invente un nombre nuevo. Sólo viaja la plantilla, que no tiene
+# valores reales. auth.json lleva credenciales de paquetes de Composer.
+.env*
+*.env
+!*.env.example
+!*.envProduccion.example
+auth.json
 /storage/*.key
-/storage/pail
-/vendor
+
+# ------------------------------------------------------------- base de datos
+# El SQLite de desarrollo es desechable: `php artisan migrate:fresh --seed` lo
+# regenera. Los volcados (.sql) pueden llevar datos reales del negocio.
+/database/*.sqlite
+/database/*.sqlite-journal
+/database/*.sqlite-wal
+/database/*.sqlite-shm
+*.sql
+*.sql.gz
+*.sql.bz2
+*.sql.zip
+/backup/
+/backups/
+/dump/
+/dumps/
+
+# --------------------------------------------------------------------- logs
+# `*.log` pilla cualquier fichero suelto; las dos reglas de directorios cubren
+# además lo que escriben el framework y las colas. Los anidados de Laravel
+# (storage/logs/.gitignore, storage/app/public/.gitignore…) ya ignoran el
+# contenido; se repiten aquí para que la intención sea legible desde la raíz.
+*.log
+/logs/
+/storage/logs/*
+!/storage/logs/.gitignore
+/storage/pail/*
+!/storage/pail/.gitignore
+
+# ------------------------------------------------------------------- caches
+# Cachés de PHPUnit, PHPStan, Pint, coberturas y node. No aportan historial y
+# ocupan más que el propio código.
+/.phpunit.cache/
+/.phpunit.result.cache
+.phpunit.result.cache
+/.phpstan.cache/
+/.php-cs-fixer.cache
+/phpstan.neon.backup
+/coverage/
+/.nyc_output/
+/.cache/
+/node_modules/.vite/
+
+# ------------------------------------------------------------ editores y SO
+/.idea/
+/.vscode/
+/.fleet/
+/.zed/
+/.nova/
+/.cursor/
+/.codex/
+/.history/
+/.phpactor.json
 _ide_helper.php
-Homestead.json
-Homestead.yaml
+_ide_helper_models.php
+*.swp
+*.swo
+*~
+.DS_Store
+._*
+.Trashes
 Thumbs.db
-database/*.sqlite
-database/*.sqlite-journal
-database/*.sqlite-wal
-database/*.sqlite-shm
-.env.production.example.local
+$RECYCLE.BIN/
