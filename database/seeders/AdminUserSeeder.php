@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 
 /**
  * Alta de la única cuenta del sistema (no hay registro público).
@@ -82,8 +83,14 @@ class AdminUserSeeder extends Seeder
         $user->save();
 
         if ($generated) {
+            // OutputFormatter::escape no es decorativo: el pool de símbolos de
+            // Str::password incluye '<', '>' y '\', así que ~2 de cada 100
+            // contraseñas generadas contienen secuencias con forma de etiqueta
+            // de estilo. Sin escapar, el formatter de Symfony se las come (o
+            // añade '</>') y la contraseña mostrada —que se ve UNA sola vez—
+            // deja de coincidir con la hasheada: cuenta creada e inutilizable.
             $this->command?->getOutput()->writeln("<fg=yellow>Administrador {$email} creado con contraseña generada:</>");
-            $this->command?->getOutput()->writeln("<options=bold>{$password}</>");
+            $this->command?->getOutput()->writeln("<options=bold>".OutputFormatter::escape($password)."</>");
             $this->command?->getOutput()->writeln("<fg=yellow>Se muestra UNA sola vez. Guárdala y cámbiala si quieres con: php artisan tinker</>");
         } else {
             $this->command?->getOutput()->writeln("<fg=green>Administrador {$email} creado con la contraseña de ADMIN_PASSWORD.</>");
@@ -131,4 +138,3 @@ class AdminUserSeeder extends Seeder
         }
     }
 }
-
