@@ -36,6 +36,10 @@ class AdminAccessTest extends TestCase
         $this->get("/admin/products/create")->assertRedirect("/login");
         $this->get("/admin/products/{$product->id}/edit")->assertRedirect("/login");
 
+        // El fragmento HTML que consulta Alpine al filtrar también está tras
+        // `auth`: es una ruta suelta dentro del grupo, no la resource.
+        $this->get("/admin/products/filters?search=Croq")->assertRedirect("/login");
+
         $this->post("/admin/products", ["name" => "Inyectado", "price" => 1, "category_id" => $category->id])
             ->assertRedirect("/login");
         $this->put("/admin/products/{$product->id}", ["name" => "Renombrado sin sesión"])

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use RuntimeException;
+use Symfony\Component\Console\Formatter\OutputFormatter;
 use Tests\TestCase;
 
 /**
@@ -38,7 +39,7 @@ class AdminUserSeederTest extends TestCase
      * Sembrar vía consola: es el camino real (`db:seed`) y ejercita la rama
      * que imprime la contraseña generada por salida.
      */
-    private function seed(): string
+    private function seedViaConsole(): string
     {
         Artisan::call("db:seed", ["--class" => AdminUserSeeder::class]);
 
@@ -57,7 +58,7 @@ class AdminUserSeederTest extends TestCase
 
     public function test_creates_the_administrator_from_the_environment_values(): void
     {
-        $this->seed();
+        $this->seedViaConsole();
 
         $user = User::where("email", "admin@local.test")->first();
 
@@ -71,7 +72,7 @@ class AdminUserSeederTest extends TestCase
 
     public function test_it_refuses_to_seed_without_a_valid_admin_email(): void
     {
-        config(["security.admin.email" => ""];
+        config(["security.admin.email" => ""]);
 
         $this->expectException(RuntimeException::class);
 
@@ -100,10 +101,52 @@ class AdminUserSeederTest extends TestCase
 
         // La contraseña generada se imprime una sola vez por consola.
         $this->assertMatchesRegularExpression("/[^\s]+/", $output);
-        $generated = trim(explode("\n", trim($output))[1]);
+
+        // `db:seed` imprime su propia cabecera ("INFO Seeding database." y las
+        // líneas RUNNING/DONE), así que la contraseña no es la segunda línea de
+        // la salida: es la que va justo detrás del aviso del seeder.
+        $lines = array_map("trim", explode("\n", $output));
+        $headerIndex = array_key_first(array_filter(
+            $lines,
+            fn (string $line): bool => str_contains($line, "contraseña generada:")
+        ));
+
+        if ($headerIndex === null) {
+            $this->fail("El seeder no avisó de la contraseña generada:\n".$output);
+        }
+
+        $generated = $lines[$headerIndex + 1];
 
         $this->assertGreaterThanOrEqual(32, strlen($generated));
         $this->assertTrue(Hash::check($generated, $user->password));
+    }
+
+    public function test_it_prints_the_generated_password_escaped_for_the_console(): void
+    {
+        // Str::password(symbols: true) incluye '<', '>' y '\'. Si la contraseña
+        // generada se escribe en la consola sin escapar, el formatter de Symfony
+        // interpreta esas secuencias como etiquetas de estilo: midiendo 20.000
+        // contraseñas reales del pool, 409 (2%) salen corruptas. Como solo se
+        // imprimen una vez, la cuenta nace inutilizable.
+        $formatter = new OutputFormatter;
+
+        foreach ([
+            'K%bVZl0%93-BgXmY<&)eVT4QTKajPW~',
+            'q?y#8g~sXZxmkVTD7w.1uGp^_qa68|X',
+            '<info>Abcd1234</info>',
+            'a\<b>c',
+        ] as $password) {
+            $printed = $formatter->format("<options=bold>".OutputFormatter::escape($password)."</>");
+
+            $this->assertSame($password, $printed);
+        }
+
+        // Y el seeder usa exactamente ese escape: la prueba de arriba sería inútil
+        // si el código volviera a interpolar la contraseña cruda.
+        $seeder = file_get_contents(base_path("database/seeders/AdminUserSeeder.php"));
+
+        $this->assertStringContainsString("OutputFormatter::escape(\$password)", $seeder);
+        $this->assertStringNotContainsString("<options=bold>{\$password}</>", $seeder);
     }
 
     public function test_it_refuses_a_weak_password_in_production(): void
@@ -114,12 +157,16 @@ class AdminUserSeederTest extends TestCase
 
         $this->expectException(RuntimeException::class);
 
-        Artisan::call("db:seed", ["--class" => AdminUserSeeder::class]);
+        // `Artisan::call` no vale aquí: con env=production la consola responde a
+        // su propio aviso "APPLICATION IN PRODUCTION" y, al no haber terminal,
+        // cancela el comando ("Command cancelled") sin llegar al seeder. La
+        // excepción debe propagarse llamando al seeder a pelo.
+        $this->seedDirectly();
     }
 
     public function test_it_does_not_duplicate_the_admin_nor_reset_its_password(): void
     {
-        $this->seed();
+        $this->seedViaConsole();
 
         $original = User::where("email", "admin@local.test")->value("password");
 

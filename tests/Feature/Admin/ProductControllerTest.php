@@ -57,6 +57,184 @@ class ProductControllerTest extends TestCase
         });
     }
 
+    // INDEX · FILTROS
+    public function test_index_filters_by_product_name()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas de jamón', 'price' => 8.50]);
+        Product::create(['category_id' => $category->id, 'name' => 'Ensalada templada', 'price' => 11.00]);
+
+        $response = $this->get('/admin/products?search=croq');
+
+        $response->assertOk();
+        $response->assertViewHas('products', function ($products) {
+            return $products->count() === 1 && $products->first()->name === 'Croquetas de jamón';
+        });
+        $response->assertViewHas('search', 'croq');
+        $response->assertViewHas('filtersActive', true);
+        $response->assertSee('Croquetas de jamón')->assertDontSee('Ensalada templada');
+    }
+
+    public function test_index_name_search_ignores_case_but_accents_are_literal()
+    {
+        $category = Category::create(['name' => 'Bebidas', 'slug' => 'bebidas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Café solo', 'price' => 1.60]);
+        Product::create(['category_id' => $category->id, 'name' => 'AGUA', 'price' => 1.20]);
+
+        // SQLite resuelve LIKE sin distinguir mayúsculas en ASCII...
+        $this->get('/admin/products?search=agua')
+            ->assertViewHas('products', fn ($products) => $products->count() === 1);
+
+        // ...pero el acento es literal: "cafe" no encuentra "Café". El usuario lo
+        // hereda del motor, no es un fallo del filtro.
+        $this->get('/admin/products?search=cafe')
+            ->assertViewHas('products', fn ($products) => $products->isEmpty());
+    }
+
+    public function test_index_filters_by_category()
+    {
+        $entradas = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        $postres = Category::create(['name' => 'Postres', 'slug' => 'postres']);
+        Product::create(['category_id' => $entradas->id, 'name' => 'Croquetas', 'price' => 8.50]);
+        Product::create(['category_id' => $postres->id, 'name' => 'Tarta', 'price' => 5.00]);
+
+        $response = $this->get("/admin/products?category={$postres->id}");
+
+        $response->assertViewHas('products', fn ($products) => $products->count() === 1
+            && $products->first()->name === 'Tarta');
+        $response->assertViewHas('categoryId', $postres->id);
+    }
+
+    public function test_index_combines_name_and_category()
+    {
+        $entradas = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        $postres = Category::create(['name' => 'Postres', 'slug' => 'postres']);
+        Product::create(['category_id' => $entradas->id, 'name' => 'Tarta de Santiago', 'price' => 6.00]);
+        Product::create(['category_id' => $postres->id, 'name' => 'Tarta de queso', 'price' => 5.00]);
+
+        $response = $this->get("/admin/products?search=tarta&category={$postres->id}");
+
+        $response->assertViewHas('products', fn ($products) => $products->count() === 1
+            && $products->first()->name === 'Tarta de queso');
+    }
+
+    public function test_index_ignores_blank_and_unknown_filters()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+
+        // Espacios en blanco: no es un filtro, es la nada.
+        $this->get('/admin/products?search=+')
+            ->assertViewHas('products', fn ($products) => $products->count() === 1)
+            ->assertViewHas('search', null)
+            ->assertViewHas('filtersActive', false);
+
+        // Una categoría borrada con la pestaña abierta debe dejar el listado
+        // completo, no vaciarlo: un filtro que no aplica a nada no es un error.
+        $this->get('/admin/products?category=9999')
+            ->assertViewHas('products', fn ($products) => $products->count() === 1)
+            ->assertViewHas('categoryId', null);
+    }
+
+    public function test_index_keeps_the_filter_values_so_the_form_is_not_lost()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+
+        $this->get("/admin/products?search=croq&category={$category->id}")
+            ->assertSee('value="croq"', false)
+            ->assertSee('value="'.$category->id.'" selected', false);
+    }
+
+    // FILTERS · el fragmento que pide Alpine al teclear
+    public function test_filters_endpoint_returns_only_the_list_partial()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+        Product::create(['category_id' => $category->id, 'name' => 'Ensalada', 'price' => 11.00]);
+
+        $response = $this->get('/admin/products/filters?search=croq');
+
+        $response->assertOk();
+        $response->assertViewIs('admin.products.partials.list');
+        $response->assertViewHas('products', fn ($products) => $products->count() === 1
+            && $products->first()->name === 'Croquetas');
+
+        // Es el fragmento, no la página: si devolviera el layout completo, Alpine
+        // lo inyectaría dentro del contenedor y el panel se duplicaría.
+        $html = $response->getContent();
+        $this->assertStringNotContainsString('<!DOCTYPE html>', $html);
+        $this->assertStringNotContainsString('id="sidebar"', $html);
+    }
+
+    public function test_filters_endpoint_matches_what_index_rendered()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+
+        $query = "?search=croq&category={$category->id}";
+
+        $page = $this->get('/admin/products'.$query)->getContent();
+        $partial = trim($this->get('/admin/products/filters'.$query)->getContent());
+
+        // El primer render de Blade y el fragmento de Alpine tienen que ser el
+        // mismo HTML: si se bifurcan, el listado cambia al teclear la primera letra.
+        $this->assertStringContainsString($partial, $page);
+    }
+
+    public function test_filters_endpoint_shows_the_empty_state_with_filters_active()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+
+        $this->get('/admin/products/filters?search=inexistente')
+            ->assertOk()
+            ->assertSee('Ningún producto coincide con la búsqueda.');
+    }
+
+    public function test_filters_endpoint_is_not_eaten_by_the_show_route()
+    {
+        // `admin/products/filters` se declara antes del resource: registrada
+        // después, el route model binding se traga la palabra y responde 404.
+        $this->get('/admin/products/filters')->assertOk();
+    }
+
+    public function test_filters_endpoint_ships_delete_forms_that_still_work()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create(['category_id' => $category->id, 'name' => 'Croquetas', 'price' => 8.50]);
+
+        $html = $this->get('/admin/products/filters')->getContent();
+
+        // El fragmento se inyecta con innerHTML: los @csrf del borrado tienen que
+        // venir dentro, o borrar desde el listado filtrado mandaría token vacío.
+        $this->assertStringContainsString('name="_token"', $html);
+        $this->assertStringContainsString('name="_method" value="DELETE"', $html);
+
+        // Y ningún nodo del fragmento puede traer directivas de Alpine: innerHTML
+        // no reequilibra el árbol, así que quedarían inertes.
+        $this->assertStringNotContainsString('x-for=', $html);
+        $this->assertStringNotContainsString('x-show=', $html);
+        $this->assertStringNotContainsString('onclick=', $html);
+    }
+
+    public function test_filters_endpoint_escapes_product_names()
+    {
+        $category = Category::create(['name' => 'Entradas', 'slug' => 'entradas']);
+        Product::create([
+            'category_id' => $category->id,
+            'name' => '<script>alert(1)</script>',
+            'price' => 8.50,
+        ]);
+
+        $html = $this->get('/admin/products/filters?search=script')->getContent();
+
+        // El fragmento viaja por innerHTML: si Blade no lo escapase, el refresco
+        // sería un XSS aunque la página original estuviera limpia.
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html);
+        $this->assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $html);
+    }
+
     // CREATE
     public function test_create_returns_categories()
     {
