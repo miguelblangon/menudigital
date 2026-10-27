@@ -41,7 +41,7 @@ Credenciales sembradas en entorno de desarrollo (`database/seeders/AdminUserSeed
 |---|---|---|
 | `/` | público | La carta, con filtros de categoría y de alérgenos |
 | `/dashboard` | auth | Resumen del negocio |
-| `/admin/products` | auth | CRUD de productos (imagen, precio, disponibilidad, alérgenos) |
+| `/admin/products` | auth | CRUD de productos (imagen, precio, disponibilidad, alérgenos), con buscador por nombre y filtro por categoría |
 | `/admin/categories` | auth | CRUD de categorías (slug automático, orden manual) |
 | `/admin/allergens` | auth | CRUD de alérgenos |
 | `/admin/qr` | auth | Código QR de la carta: ver, descargar PNG, imprimir |
@@ -50,7 +50,7 @@ Credenciales sembradas en entorno de desarrollo (`database/seeders/AdminUserSeed
 ## Verificación
 
 ```bash
-composer test                                                # 103 passing · 434 aserciones
+composer test                                                # 123 passing · 499 aserciones
 vendor/bin/pint --test                                       # 0 incidencias de estilo
 vendor/bin/phpstan analyse --no-progress --memory-limit=1G   # 0 errores (nivel 5)
 ```
