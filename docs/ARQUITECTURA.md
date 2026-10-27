@@ -38,7 +38,7 @@ Tres detalles con historia, anotados para que no vuelvan:
 
 Modelos: `Product` (`$fillable` explícito, `casts` de `price`→float y `available`→bool, scope `available()`), `Category` (`products()`), `Allergen` (`products()`).
 
-## Rutas (42)
+## Rutas (43)
 
 ```bash
 php artisan route:list --except-vendor
@@ -48,6 +48,7 @@ php artisan route:list --except-vendor
 |---|---|---|
 | Carta pública | `GET /` → `MenuController@index` | invitado |
 | Panel CRUD | `Route::resource` de `admin/products`, `admin/categories`, `admin/allergens` (7 cada una) | `auth` |
+| Panel: filtros | `GET admin/products/filters` → `ProductController@filters` (fragmento del listado) | `auth` |
 | QR | `admin/qr`, `admin/qr/generate`, `admin/qr/download` | `auth` |
 | Breeze | `login`, `logout`, `forgot-password`, `reset-password`, `confirm-password`, `verify-email`, `profile`, `dashboard` | mixto |
 | Salud | `GET /up` (definido en `bootstrap/app.php`) | público |
@@ -71,7 +72,7 @@ Orden de la carta: primero `categories.order` (subconsulta escalar, sin `join`, 
 
 | Controlador | Particularidades |
 |---|---|
-| `Admin\ProductController` | validación con `Rule::exists` de categoría y de `allergens.*`, imagen `image|max:2048`, subida al disco `public`, `allergens()->sync()` y borrado de la imagen anterior al reemplazarla. El checkbox va precedido de `<input type="hidden" name="available" value="0">`: desmarcado significa realmente *no disponible* |
+| `Admin\ProductController` | validación con `Rule::exists` de categoría y de `allergens.*`, imagen `image|max:2048`, subida al disco `public`, `allergens()->sync()` y borrado de la imagen anterior al reemplazarla. El checkbox va precedido de `<input type="hidden" name="available" value="0">`: desmarcado significa realmente *no disponible*. El listado filtra por `search` (LIKE sobre `name`) y `category` (id): `filterState()` es **común** a `index()` y a `filters()`, así que la primera pantalla y el refresco async coinciden. Un `category` inexistente no es error: se ignora y deja el listado completo. La ruta `filters` se declara **antes** del `Route::resource`, si no `admin/products/{product}` se la queda y el *route model binding* responde 404 con `"filters"` como id |
 | `Admin\CategoryController` | `slug` único con sufijo numérico ante colisión (`cafe-2`), `withCount("products")` en el listado, `destroy()` devuelve flash de error si la categoría tiene productos |
 | `Admin\AllergenController` | nombre único, `detach()` explícito al borrar |
 | `Admin\QrController` | `index()` (SVG embebido), `generate()` (`image/svg+xml`), `download()` (PNG adjunto a 600 px) |
@@ -86,6 +87,47 @@ Orden de la carta: primero `categories.order` (subconsulta escalar, sin `join`, 
 - `#menu-toggle` / `#sidebar` / `#sidebar-overlay` → *drawer* del panel.
 - `[data-print]` → `window.print()` en la página del QR.
 - `[data-logout]` → submit del formulario de cierre de sesión.
+- `[data-product-filters]` → `Alpine.data('productFilters')`: el buscador y el selector de categoría del listado de productos.
+
+### Filtro async del listado de productos
+
+El componente `productFilters` no filtra en memoria: **filtra el servidor** y
+sustituye el contenido de `[data-product-list]` con `innerHTML`.
+
+- **Por qué HTML y no JSON:** el listado tiene dos maquetas (tarjetas en móvil,
+  tabla en `sm:`) y formularios de borrado con `@csrf`. Renderizar eso en
+  plantillas `x-for` al otro lado del cable sería duplicar el markup y su
+  escapado. Respondiendo el partial Blade, lo inyectado sigue escapado por
+  Blade y la confirmación de borrado sigue funcionando por delegación
+  (`form[data-confirm]`), no por atributos inline.
+- **Sin directivas de Alpine dentro del partial:** el contenedor se reemplaza con
+  `innerHTML` y Alpine no recorre nodos recién añadidos. Si hubiera un `x-for`
+  ahí, quedaría inerte tras el primer refresco.
+- **El `<form method="GET">` es la fuente de verdad:** los valores se leen con
+  `new FormData(form)`, no con una copia en el estado. Con JavaScript desactivado
+  ese mismo formulario filtra recargando; con JavaScript activo Alpine intercepta
+  el `submit`. El botón es el mismo en los dos casos y no lleva `x-cloak`: Alpine
+  quita ese atributo al inicializar, así que ocultarlo así lo dejaría visible
+  justo cuando JavaScript **sí** funciona.
+- **Nunca se busca desde `$el`, siempre desde el nodo del componente:** en Alpine
+  `$el` es el elemento sobre el que se evalúa la expresión. Como `@input`,
+  `@change` y `@submit.prevent` cuelgan del `<form>` y de los campos, `this.$el`
+  dentro de un método es el campo, no la raíz del `x-data` (comprobado con
+  Alpine 3.17 sobre el HTML real del listado). `scope()` sube con
+  `closest('[data-product-filters]')` y desde ahí se localizan el formulario, el
+  listado y `#product-search`. Sin ese ancla el `querySelector` devolvía `null` y
+  `new FormData(null)` reventaba con «FormData constructor: Argument 1 is not an
+  object»: ni una petición salía al servidor.
+- **Carreras:** teclear dispara varios refrescoes. Cada petición cancela a la
+  anterior con `AbortController` y se numera con `requestId`; gana siempre la
+  última, y sólo esa apaga el indicador de carga.
+- **La URL refleja lo que hay en pantalla** (`history.replaceState`, no
+  `pushState`): recargar, volver atrás o compartir el enlace devuelve el mismo
+  listado, porque `index()` aplica la misma query.
+
+Es el mismo patrón que la carta pública (servidor para enlaces profundos,
+cliente para no recargar), así que el filtro del panel también se verifica sin
+JavaScript: ver [PRUEBAS.md](PRUEBAS.md).
 
 Esto no es estética: es lo que permite `script-src 'self' 'unsafe-eval'` **sin `'unsafe-inline'`**. Un `<script>` inyectado en el nombre de un producto (XSS) no llega a ejecutarse. `'unsafe-eval'` es obligatorio porque Alpine compila sus expresiones con `new Function()`.
 
@@ -121,6 +163,7 @@ Fuerza bruta: `LoginRequest::ensureIsNotRateLimited()` limita a **5 intentos** c
 - `layouts/guest.blade.php`: login y recuperación.
 - `menu.blade.php` + `components/menu-*.blade.php`: carta pública (header, barra de categorías, tarjeta de producto, filtro de alérgenos).
 - `admin/{products,categories,allergens}/{index,create,edit}.blade.php`: CRUD (9 vistas).
+- `admin/products/partials/{list,table}.blade.php`: el listado filtrable, en partial y no dentro de `index.blade.php` porque es **el mismo fragmento** que devuelve `ProductController@filters` cuando Alpine lo pide. `list` trae las tarjetas (móvil) e incluye `table` (escritorio): 11 vistas de CRUD en total.
 
 Los listados del panel combinan `hidden md:table` (tabla en escritorio) con tarjetas `md:hidden`, porque el panel se gestiona desde el móvil. El criterio completo está en [MOVIL.md](MOVIL.md).
 

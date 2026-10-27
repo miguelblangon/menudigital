@@ -95,7 +95,7 @@ flujo normal y puede duplicar datos.
 composer dev                  # artisan serve + queue + vite en un solo proceso
 npm run dev                   # sólo Vite
 npm run build                 # bundle de producción → public/build
-php artisan test              # 103 tests
+php artisan test              # 123 tests
 composer test                 # config:clear + artisan test
 vendor/bin/pint               # corrige el estilo
 vendor/bin/pint --test        # sólo informa

@@ -1,6 +1,6 @@
 # Pruebas y puertas de calidad
 
-Estado de la suite: **103 tests · 434 aserciones · ~4,6 s · 0 fallos**.
+Estado de la suite: **123 tests · 499 aserciones · ~4,7 s · 0 fallos**.
 
 ```bash
 php artisan test                                            # todo
@@ -29,17 +29,18 @@ Todos los tests que tocan base de datos usan `RefreshDatabase` (una transacción
 
 | Fichero | Tests | Qué fija |
 |---|---:|---|
-| `Feature/Admin/AdminAccessTest.php` | 4 | **puerta del panel sin sesión**: las siete acciones de cada CRUD (incluidas `store`, `update` y `destroy`) redirigen a `/login` y ningún intento de escritura llega a la base de datos |
-| `Feature/Admin/ProductControllerTest.php` | 16 | CRUD completo, validaciones (`price` numérico, `category_id` existente, alérgeno inexistente rechazado), subida y reemplazo de imagen (la antigua se borra del disco) y borrado del fichero al eliminar el producto |
+| `Feature/Admin/AdminAccessTest.php` | 4 | **puerta del panel sin sesión**: las siete acciones de cada CRUD (incluidas `store`, `update` y `destroy`) y el fragmento `admin/products/filters` redirigen a `/login` y ningún intento de escritura llega a la base de datos |
+| `Feature/Admin/ProductControllerTest.php` | 28 | CRUD completo, validaciones (`price` numérico, `category_id` existente, alérgeno inexistente rechazado), subida y reemplazo de imagen (la antigua se borra del disco) y borrado del fichero al eliminar el producto. Además el **filtro del listado**: `search` por nombre (insensible a mayúsculas en ASCII, `trim`, vacío sin efecto, sin resultados), `category` por id (categoría inexistente = sin filtro), ambos a la vez, `200` en el fragmento `admin/products/filters` con el mismo subconjunto de filas que la página completa, y que el formulario de la vista expone los dos campos con sus valores recuperados |
 | `Feature/Admin/AllergenControllerTest.php` | 13 | CRUD, nombre único (en `store` y en `update`, permitiendo mantener el propio), tabla intermedia `allergen_product`, relación navegable desde los dos lados y `detach()` de los productos al borrar un alérgeno |
 | `Feature/Admin/CategoryControllerTest.php` | 9 | CRUD, nombre único, `slug` con sufijo cuando dos nombres colisionan y **bloqueo del borrado** de una categoría con productos |
 | `Feature/Admin/QrControllerTest.php` | 5 | invitado → `/login`; `/admin/qr` embebe `<svg`; `/generate` devuelve `image/svg+xml`; `/download` devuelve un PNG real (se comprueban los bytes mágicos `\x89PNG\r\n\x1a\n`, no el `Content-Type` a pelo) |
 | `Feature/MenuControllerTest.php` | 9 | carta pública: producto no disponible oculto, filtro por `slug`, exclusión por alérgeno (`whereDoesntHave`), ids de alérgeno inexistentes ignorados, `max_price`, orden por `categories.order` + nombre, 404 en `slug` desconocido, acceso sin autenticar y que el estado de Alpine viaja como JSON parseable sin poder cerrar el bloque `</script>` |
 | `Feature/SecurityHeadersTest.php` | 11 | cabeceras de endurecimiento en carta y panel, `no-store` sólo en rutas privadas, cabeceras presentes también en 404/302, CSP sin orígenes de terceros, `script-src` sin `'unsafe-inline'`, HSTS sólo en HTTPS y que **ninguna vista** contiene manejadores inline (`onclick=`, `onload=`) ni CDN de tipografías |
-| `Feature/ResponsiveLayoutTest.php` | 10 | adaptabilidad a móvil (se detaila abajo) |
+| `Feature/ResponsiveLayoutTest.php` | 11 | adaptabilidad a móvil (se detaila abajo) |
 | `Feature/Auth/LoginThrottleTest.php` | 3 | bloqueo tras 5 intentos, contador que se limpia al acertar y clave `email\|ip` (un atacante no bloquea la cuenta de otro usuario desde otra IP) |
 | `Feature/Auth/{Authentication,EmailVerification,PasswordConfirmation,PasswordReset,PasswordUpdate}Test.php` | 16 | lo que trae Breeze: login, verificación, confirmación, reset y cambio de contraseña |
 | `Feature/ProfileTest.php` | 5 | perfil: nombre/email, verificación al cambiar el email, contraseña y borrado de cuenta |
+| `Feature/Database/AdminUserSeederTest.php` | 7 | el administrador viene del entorno (`ADMIN_EMAIL`/`ADMIN_PASSWORD`), nunca de un valor escrito en el seeder: rechaza email vacío o placeholder, rechaza la contraseña débil heredada (`admin123`) cuando la política es estricta, genera una fuerte si no hay ninguna y **no pisa** la contraseña de un admin ya creado |
 | `Feature/ExampleTest.php`, `Unit/ExampleTest.php` | 2 | humo (200 en `/`); se mantienen como test de cordura del arranque |
 
 ## `ResponsiveLayoutTest.php` — qué fija cada caso
@@ -53,6 +54,7 @@ La adaptabilidad a móvil no se puede afirmar con un test de HTTP corriente (es 
 | `test_the_admin_sidebar_reaches_every_section_and_can_log_out` | el *sidebar* enlaza Dashboard, Productos, Categorías, Alérgenos, QR, Perfil y **logout**: desde el móvil no puede haber secciones inalcanzables |
 | `test_the_qr_svg_is_wrapped_because_endroid_hardcodes_its_width` | el `<svg>` del QR está dentro de `[data-qr]`: `endroid/qr-code` escribe `width="464px"` y sin contenedor la página desborda en horizontal |
 | `test_the_category_bar_is_part_of_the_sticky_header_not_a_second_offset` | no hay un segundo `sticky` con offset mágico (`top-[57px]`) |
+| `test_the_category_bar_wraps_into_rows_instead_of_hiding_categories` | la barra de categorías hace `flex-wrap` y no `overflow-hidden`: con muchas categorías se parten en filas antes de dejar categorías inalcanzables |
 | `test_the_allergen_sheet_is_cloaked_until_alpine_starts` | el *bottom sheet* lleva `x-cloak` (Alpine arranca diferido y el *overlay* se vería un instante por encima de la carta) |
 | `test_the_mobile_drawer_is_declared_accessibly` | `#menu-toggle` declara `aria-controls` y `aria-expanded`, y existen `#sidebar` y `#sidebar-overlay` |
 | `test_the_stylesheets_carry_the_mobile_specific_rules` | `app.css` contiene `pb-safe`, `env(safe-area-inset-bottom`, `[x-cloak]`, `no-scrollbar`, `[data-qr] svg` y `@media print` |
