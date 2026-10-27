@@ -151,6 +151,190 @@ document.querySelectorAll('[data-logout]').forEach((link) => {
     });
 });
 
+// ------------------------------------------------ panel: filtros de productos
+//
+// El listado del panel se filtra sin recargar. Dos decisiones que se sostienen
+// la una a la otra:
+//
+//  1. Filtra el servidor. `GET /admin/products/filters` devuelve el mismo partial
+//     Blade que pintó la primera pantalla, con `admin/products/index` aplicando
+//     los mismos filtros en su propio render. Así el markup de las tarjetas y de
+//     la tabla (con su escapado `{{ }}` y sus `@csrf` de los borrados) no se
+//     duplica en plantillas de Alpine al otro lado del cable, y el `innerHTML`
+//     que se inyecta sigue siendo HTML escapado por Blade: un nombre de producto
+//     inyectado (XSS) no abre camino ni aquí ni en el render inicial.
+//  2. El formulario es la fuente de verdad. Los valores se leen del DOM con
+//     `new FormData(form)`, no de una copia en el estado, porque con JavaScript
+//     desactivado ese mismo `<form method="GET">` es el que filtra.
+//
+// Dos refrescoes cruzados es lo normal tecleando: cada petición nueva cancela a
+// la anterior con AbortController y además se numera, para que una respuesta
+// tardía no pise a la última ni apague el indicador de carga de su sucesora.
+const productFilterRoot = document.querySelector('[data-product-filters]');
+
+if (productFilterRoot !== null) {
+    Alpine.data('productFilters', () => ({
+        loading: false,
+        error: null,
+        hasFilters: false,
+        requestId: 0,
+        controller: null,
+
+        init() {
+            // Hidrata desde el formulario: la primera pantalla ya puede llegar
+            // filtrada por query (?search=…&category=…) y el botón "Limpiar"
+            // debe verse desde el principio.
+            this.hasFilters = this.hasValues(this.params());
+        },
+
+        // `$el` en Alpine NO es la raíz del `x-data`: es el elemento sobre el que
+        // Alpine está evaluando la expresión. Como `@input`, `@change` y
+        // `@submit.prevent` cuelgan del <form> y de los campos, dentro de apply()
+        // `this.$el` era el campo o el propio formulario, y un `querySelector`
+        // desde ahí no encontraba nada: `new FormData(null)` reventaba con
+        // "FormData constructor: Argument 1 is not an object" antes de pedir
+        // nada al servidor. Todo se busca siempre desde el nodo del componente.
+        scope() {
+            return this.$el.closest("[data-product-filters]") ?? this.$el;
+        },
+
+        form() {
+            return this.scope().querySelector("[data-filter-form]");
+        },
+
+        list() {
+            return this.scope().querySelector("[data-product-list]");
+        },
+
+        // `URLSearchParams.size` es demasiado reciente como para fiarse; la
+        // comparación de la query ya dice lo mismo y va en cualquier navegador.
+        hasValues(params) {
+            return params.toString() !== "";
+        },
+
+        params() {
+            const form = this.form();
+
+            if (form === null) {
+                return new URLSearchParams();
+            }
+
+            const params = new URLSearchParams(new FormData(form));
+
+            // Un campo vacío no viaja: "?search=&category=" ensucia la URL y el
+            // servidor lo trataría igual que una ausencia.
+            for (const [key, value] of [...params.entries()]) {
+                if (value === "") {
+                    params.delete(key);
+                }
+            }
+
+            return params;
+        },
+
+        apply() {
+            this.requestId += 1;
+
+            const requestId = this.requestId;
+
+            if (this.controller !== null) {
+                this.controller.abort();
+            }
+
+            this.controller = new AbortController();
+
+            const params = this.params();
+            const query = params.toString();
+            const endpoint = this.scope().dataset.endpoint;
+
+            if (typeof endpoint !== "string" || endpoint === "") {
+                this.error = "El listado no tiene endpoint de filtros configurado.";
+
+                return;
+            }
+
+            this.loading = true;
+            this.error = null;
+            this.hasFilters = this.hasValues(params);
+
+            fetch(query === "" ? endpoint : `${endpoint}?${query}`, {
+                headers: {
+                    "Accept": "text/html",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                credentials: "same-origin",
+                signal: this.controller.signal,
+            })
+                .then((response) => {
+                    if (! response.ok) {
+                        throw new Error(`respuesta ${response.status}`);
+                    }
+
+                    return response.text();
+                })
+                .then((html) => {
+                    if (requestId !== this.requestId) {
+                        return;
+                    }
+
+                    // innerHTML y no x-html: el fragmento no trae ni una directiva
+                    // de Alpine, así que no hay árbol que volver a inicializar.
+                    const list = this.list();
+
+                    if (list === null) {
+                        throw new Error("falta el contenedor del listado");
+                    }
+
+                    list.innerHTML = html;
+                    this.syncUrl(params);
+                })
+                .catch((error) => {
+                    if (error.name === "AbortError" || requestId !== this.requestId) {
+                        return;
+                    }
+
+                    // No se toca el listado: lo que hay en pantalla sigue siendo
+                    // válido; sólo se avisa de que el refresco no llegó.
+                    this.error = "No se pudo actualizar el listado: lo que ves puede estar desactualizado.";
+                })
+                .finally(() => {
+                    if (requestId === this.requestId) {
+                        this.loading = false;
+                    }
+                });
+        },
+
+        // La URL refleja lo que hay en pantalla, así que recargar, volver atrás o
+        // compartir el enlace devuelve exactamente el mismo listado (el servidor
+        // aplica la misma query en index()). replaceState, no pushState: una letra
+        // tecleada no debe dejar 20 entradas en el histórico.
+        syncUrl(params) {
+            const query = params.toString();
+            const base = this.scope().dataset.listUrl ?? window.location.pathname;
+
+            window.history.replaceState({}, "", query === "" ? base : `${base}?${query}`);
+        },
+
+        clear() {
+            const form = this.form();
+
+            if (form !== null) {
+                form.querySelectorAll("[data-filter-field]").forEach((field) => {
+                    field.value = "";
+                });
+            }
+
+            this.apply();
+
+            const search = this.scope().querySelector("#product-search");
+
+            if (search !== null) {
+                search.focus();
+            }
+        },
+    }));
+}
+
 window.Alpine = Alpine;
 
 Alpine.start();

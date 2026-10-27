@@ -31,6 +31,10 @@ Route::get('/dashboard', function () {
 
 // Rutas de administración (requieren autenticación)
 Route::prefix("admin")->name("admin.")->middleware(['auth'])->group(function () {
+    // Declarada ANTES del resource: registrada después, /admin/products/filters se
+    // lo quedaría GET admin/products/{product} y el route model binding respondería
+    // 404 con "filters" como id.
+    Route::get("products/filters", [ProductController::class, "filters"])->name("products.filters");
     Route::resource("products", ProductController::class);
     Route::resource("categories", CategoryController::class);
     Route::resource("allergens", AllergenController::class);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Allergen;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -15,11 +16,31 @@ use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index(): View
+    /**
+     * Listado del panel. Los filtros (`search`, `category`) se aplican aquí mismo,
+     * no sólo en el cliente: así `GET /admin/products?search=tortilla&category=3`
+     * es un enlace válido que sobrevive a una recarga, al botón atrás y a un
+     * JavaScript roto, y el primer render ya coincide con el estado de Alpine.
+     */
+    public function index(Request $request): View
     {
-        $products = Product::with(["category", "allergens"])->latest()->get();
+        return view("admin.products.index", [
+            ...$this->filterState($request),
+            "categories" => $this->categories(),
+        ]);
+    }
 
-        return view("admin.products.index", ["products" => $products]);
+    /**
+     * El mismo listado, sin la página alrededor: es el fragmento que pide Alpine
+     * con `fetch` al escribir en el buscador o cambiar la categoría, y que la
+     * vista sustituye por el contenido del contenedor. Se responde HTML y no JSON
+     * a propósito: el markup de las tarjetas (móvil) y de la tabla (escritorio)
+     * sigue siendo un único Blade con sus `@csrf` y su escapado, en lugar de
+     * duplicarse en plantillas de Alpine del otro lado del cable.
+     */
+    public function filters(Request $request): View
+    {
+        return view("admin.products.partials.list", $this->filterState($request));
     }
 
     public function create(): View
@@ -84,6 +105,78 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route("admin.products.index")->with("success", "Producto eliminado correctamente.");
+    }
+
+    /**
+     * Estado compartido por el primer render (`index`) y por el refresco async
+     * (`filters`). Se calcula en un único punto para que ambos devuelvan
+     * exactamente lo mismo ante la misma query: si se bifurcan, el listado que
+     * pinta Alpine al primer tecleo es distinto del que pintó Blade al cargar.
+     *
+     * @return array{products: Collection<int, Product>, search: ?string, categoryId: ?int, filtersActive: bool}
+     */
+    private function filterState(Request $request): array
+    {
+        $search = $this->searchTerm($request);
+        $categoryId = $this->categoryId($request);
+
+        return [
+            "products" => $this->filteredProducts($search, $categoryId),
+            "search" => $search,
+            "categoryId" => $categoryId,
+            "filtersActive" => $search !== null || $categoryId !== null,
+        ];
+    }
+
+    /**
+     * Consulta del listado: mismos `with()` y mismo orden (`latest()`) en el
+     * primer render y en el refresco async, para que al filtrar no cambie ni el
+     * orden de las filas.
+     *
+     * @return Collection<int, Product>
+     */
+    private function filteredProducts(?string $search, ?int $categoryId): Collection
+    {
+        return Product::query()
+            ->with(["category", "allergens"])
+            ->when($categoryId !== null, fn (Builder $query) => $query->where("category_id", $categoryId))
+            // LIKE sin escapar `%` ni `_`: en SQLite no hay carácter de escape por
+            // defecto (haría falta un `ESCAPE '\'` explícito) y añadir la barra le
+            // devolvería al usuario un término que no coincida consigo mismo.
+            // SQLite resuelve LIKE sin distinguir mayúsculas en ASCII, así que
+            // "croq" encuentra "Croquetas"; los acentos sí son literales ("cafe"
+            // no encuentra "Café"), del mismo modo que en la carta sembrada.
+            ->when($search !== null, fn (Builder $query) => $query->where("name", "like", "%{$search}%"))
+            ->latest()
+            ->get();
+    }
+
+    /**
+     * Término de búsqueda normalizado: vacío significa "sin filtro", y se corta a
+     * 100 caracteres para que nadie pegue un párrafo entero en el buscador.
+     */
+    private function searchTerm(Request $request): ?string
+    {
+        $search = trim((string) $request->input("search", ""));
+
+        return $search === "" ? null : mb_substr($search, 0, 100);
+    }
+
+    /**
+     * Id de categoría de la query, o null si no existe tal categoría. Un id
+     * basura (la categoría se borró con la pestaña abierta, un enlace tocado a
+     * mano) debe dejar el listado completo: filtrar por algo inexistente no es
+     * un error del usuario, es un filtro que no aplica a nada.
+     */
+    private function categoryId(Request $request): ?int
+    {
+        $categoryId = (int) $request->input("category", 0);
+
+        if ($categoryId <= 0) {
+            return null;
+        }
+
+        return Category::query()->whereKey($categoryId)->exists() ? $categoryId : null;
     }
 
     /**
